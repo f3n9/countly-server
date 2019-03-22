@@ -14,6 +14,7 @@ RUN  useradd -r -M -U -d /opt/countly -s /bin/false countly && \
 # Change MongoDB folder permissions and add services folders
 RUN mkdir /etc/service/nginx && \
     mkdir /etc/service/countly-api && \
+    mkdir /etc/nginx && \
     mkdir /etc/service/countly-dashboard && \
     echo "" >> /etc/nginx/nginx.conf && \
     echo "daemon off;" >> /etc/nginx/nginx.conf
