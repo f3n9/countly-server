@@ -72,7 +72,7 @@ var countlyConfig = {
     */
     logging: {
         info: ["jobs", "push"],
-        default: "warn"
+        default: "info"
     },
     /**
     * Default proxy settings, if provided then countly uses ip address from the right side of x-forwarded-for header ignoring list of provided proxy ip addresses
