@@ -11,6 +11,7 @@ RUN  useradd -r -M -U -d /opt/countly -s /bin/false countly && \
 	echo "countly ALL=(ALL) NOPASSWD: /usr/bin/sv restart countly-api countly-dashboard" >> /etc/sudoers.d/countly && \
 	/opt/countly/bin/countly.install.sh
 
+
 # Change MongoDB folder permissions and add services folders
 RUN mkdir /etc/service/nginx && \
     mkdir /etc/service/countly-api && \
