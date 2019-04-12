@@ -20,15 +20,18 @@ var countlyConfig = {
     * @property {object=} serverOptions - provide raw driver server options, used for all, single, mongos and replica set servers
     */
     mongodb: {
+        /*
         replSetServers : [
             'mongodb-0.mongodb.countly.svc.cluster.local:27017',
             'mongodb-1.mongodb.countly.svc.cluster.local:27017',
 	    'mongodb-2.mongodb.countly.svc.cluster.local:27017'
         ],
 		replicaName: "rs0",
+        */
+        host: "10.128.44.8"
         db: "countly",
-		username: "test",
-		password: "test",
+		username: "countly",
+		password: "countly3101",
         max_pool_size: 1000,
         dbOptions:{
             //db options
