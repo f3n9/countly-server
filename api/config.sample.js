@@ -28,7 +28,7 @@ var countlyConfig = {
         ],
 		replicaName: "rs0",
         */
-        host: "10.128.44.8"
+        host: "10.128.44.8",
         db: "countly",
 		username: "countly",
 		password: "countly3101",
