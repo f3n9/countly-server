@@ -31,17 +31,19 @@ fi
 
 #add node.js repo
 #echo | apt-add-repository ppa:chris-lea/node.js
-wget -qO- https://deb.nodesource.com/setup_8.x | bash -
-
+#wget -qO- https://deb.nodesource.com/setup_8.x | bash -
+export https_proxy=proxy:3128
+export http_proxy=proxy:3128
+curl -x proxy:3128 https://deb.nodesource.com/setup_8.x | bash -
 #update once more after adding new repos
 apt-get update
 
 #always install 4.8 version
-apt-get -y install gcc-4.8 g++-4.8
+apt-get -y install gcc g++
 
-export CXX="g++-4.8"
-export CC="gcc-4.8"
-update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90
+export CXX="g++-6"
+export CC="gcc-6"
+update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
 g++ --version
 
 #install nginx
@@ -63,16 +65,16 @@ then
 fi
 
 #install sendmail
-apt-get -y install sendmail
+#apt-get -y install sendmail
 
 #install grunt & npm modules
-( cd $DIR/.. ; sudo npm install -g grunt-cli --unsafe-perm ; sudo npm install --unsafe-perm)
+( cd $DIR/.. ; sudo npm config set registry http://mirrors.tencentyun.com/npm/ ; sudo npm install -g grunt-cli --unsafe-perm ; sudo npm install --unsafe-perm)
 
 #install mongodb
-if [ "$INSIDE_DOCKER_NOMONGO" != "1" ]
-then
-    bash $DIR/scripts/mongodb.install.sh
-fi
+#if [ "$INSIDE_DOCKER_NOMONGO" != "1" ]
+#then
+#    bash $DIR/scripts/mongodb.install.sh
+#fi
 
 #configure and start nginx
 cp /etc/nginx/sites-enabled/default $DIR/config/nginx.default.backup
@@ -112,15 +114,10 @@ bash $DIR/scripts/countly.install.plugins.sh
 countly update sdk-web
 
 if [ "$INSIDE_DOCKER" != "1" ]; then
-    # close google services for China area
-    if ping -c 1 google.com >> /dev/null 2>&1; then
-        echo "Pinging Google successful. Enabling Google services."
-        countly plugin disable EChartMap
-    else
-        echo "Cannot reach Google. Disabling Google services. You can enable this from Configurations later."
-        countly config "frontend.use_google" false
-        countly plugin enable EChartMap
-    fi
+  # close google services for China area
+  echo "Cannot reach Google. Disabling Google services. You can enable this from Configurations later."
+  countly config "frontend.use_google" false
+  countly plugin enable EChartMap
 fi
 
 #compile scripts for production
