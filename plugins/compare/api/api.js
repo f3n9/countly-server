@@ -151,7 +151,7 @@ var exported = {},
 
                         fetch.getTotalUsersObj("users", params, function(dbTotalUsersObj) {
                             countlySession.setDb(usersDoc || {});
-                            countlySession.setTotalUsersObj(fetch.formatTotalUsersObj(dbTotalUsersObj));
+                            countlySession.setTotalUsersObj(fetch.formatTotalUsersObj(dbTotalUsersObj), fetch.formatTotalUsersObj(dbTotalUsersObj, true));
 
                             var sessionData = countlySession.getSessionData();
                             var charts = {
@@ -184,12 +184,14 @@ var exported = {},
                             };
 
                             var data = {id: app._id, name: app.name, sessions: sessionData.total_sessions, users: sessionData.total_users, newusers: sessionData.new_users, duration: sessionData.total_time, avgduration: sessionData.avg_time, charts: charts};
-
                             callback(null, data);
                         });
                     });
                 },
-                function(res) {
+                function(err2, res) {
+                    if (err2) {
+                        return common.returnMessage(params, 503, 'Fetch apps data failed');
+                    }
                     common.returnOutput(params, res);
                 });
             });

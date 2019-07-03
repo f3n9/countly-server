@@ -14,7 +14,7 @@ class PingJob extends job.Job {
      * @param {done} done callback
      */
     run(db, done) {
-        request("http://localhost/configs", function(err, res, body) {
+        request({strictSSL: false, uri: "http://localhost/configs"}, function(err, res, body) {
             log.d(err, body);
         });
         var countlyConfigOrig = JSON.parse(JSON.stringify(countlyConfig));
@@ -59,6 +59,7 @@ class PingJob extends job.Job {
                                 timestamp: Math.floor(date.getTime() / 1000),
                                 hour: date.getHours(),
                                 dow: date.getDay(),
+                                no_meta: true,
                                 events: JSON.stringify([
                                     {
                                         key: "PING",

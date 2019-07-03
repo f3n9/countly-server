@@ -13,7 +13,7 @@
         var _period = (store.get("countly_date")) ? store.get("countly_date") : "30days";
         var _persistentSettings;
         var htmlEncodeOptions = {
-            "whiteList": {"a": ["href", "class", "target"], "b": [], "br": [], "strong": [], "p": [], "span": ["class"]},
+            "whiteList": {"a": ["href", "class", "target"], "b": [], "br": [], "strong": [], "p": [], "span": ["class"], "div": ["class"]},
             onTagAttr: function(tag, name, value/* isWhiteAttr*/) {
                 if (tag === "a") {
                     if (name === "target" && !(value === "_blank" || value === "_self" || value === "_top" || value === "_parent")) {
@@ -126,6 +126,11 @@
             else {
                 countlyCommon.periodObj = calculatePeriodObj(period);
             }
+            window.app.recordEvent({
+                "key": "period-change",
+                "count": 1,
+                "segmentation": {is_custom: Array.isArray(period)}
+            });
 
             if (noSet) {
                 return;
@@ -244,6 +249,9 @@
         countlyCommon.getPercentChange = function(previous, current) {
             var pChange = 0,
                 trend = "";
+
+            previous = parseFloat(previous);
+            current = parseFloat(current);
 
             if (previous === 0) {
                 pChange = "NA";
@@ -567,7 +575,7 @@
         */
         countlyCommon.drawTimeGraph = function(dataPoints, container, bucket, overrideBucket, small) {
             _.defer(function() {
-                if (!dataPoints.length) {
+                if (!dataPoints || !dataPoints.length) {
                     $(container).hide();
                     $(container).siblings(".graph-no-data").show();
                     return true;
@@ -1551,11 +1559,16 @@
                             if (tmpUniqVal > tmpUniqValCheck) {
                                 tmpPropertyObj.u = tmpUniqValCheck;
                             }
-                        }
 
+                        }
                         // Total users can't be less than new users
                         if (tmpPropertyObj.u < tmpPropertyObj.n) {
-                            tmpPropertyObj.u = tmpPropertyObj.n;
+                            if (countlyTotalUsers.isUsable() && estOverrideMetric && calculatedObj[rangeArray[j]]) {
+                                tmpPropertyObj.n = calculatedObj[rangeArray[j]];
+                            }
+                            else {
+                                tmpPropertyObj.u = tmpPropertyObj.n;
+                            }
                         }
 
                         // Total users can't be more than total sessions
@@ -1903,9 +1916,12 @@
             else if (number >= 10000 || number <= -10000) {
                 tmpNumber = ((number / 1000).toFixed(1).replace(".0", "")) + "K";
             }
-            else {
+            else if (number >= 0.1 || number <= -0.1) {
                 number += "";
                 tmpNumber = number.replace(".0", "");
+            }
+            else {
+                tmpNumber = number + "";
             }
 
             return tmpNumber;
@@ -2220,8 +2236,10 @@
                     //so we would not start from previous year
                     start.add(1, 'day');
 
-                    for (i = 0; i < 12; i++) {
-                        allMonths.push(start.format("MMM YYYY"));
+                    var monthCount = moment().diff(start, "months") + 1;
+
+                    for (i = 0; i < monthCount; i++) {
+                        allMonths.push(start.format(countlyCommon.getDateFormat("MMM YYYY")));
                         start.add(1, 'months');
                     }
 
@@ -2875,17 +2893,20 @@
             }
 
             //check if we can correct data using total users correction
-            if (_periodObj.periodContainsToday && estOverrideMetric && countlyTotalUsers.isUsable()) {
+            if (estOverrideMetric && countlyTotalUsers.isUsable()) {
                 for (i = 0; i < unique.length; i++) {
                     if (estOverrideMetric[unique[i]] && countlyTotalUsers.get(estOverrideMetric[unique[i]]).users) {
                         current[unique[i]] = countlyTotalUsers.get(estOverrideMetric[unique[i]]).users;
+                    }
+                    if (estOverrideMetric[unique[i]] && countlyTotalUsers.get(estOverrideMetric[unique[i]], true).users) {
+                        previous[unique[i]] = countlyTotalUsers.get(estOverrideMetric[unique[i]], true).users;
                     }
                 }
             }
 
             // Total users can't be less than new users
             if (typeof current.u !== "undefined" && typeof current.n !== "undefined" && current.u < current.n) {
-                if (_periodObj.periodContainsToday && estOverrideMetric && countlyTotalUsers.isUsable() && estOverrideMetric.u && countlyTotalUsers.get(estOverrideMetric.u).users) {
+                if (estOverrideMetric && countlyTotalUsers.isUsable() && estOverrideMetric.u && countlyTotalUsers.get(estOverrideMetric.u).users) {
                     current.n = current.u;
                 }
                 else {
@@ -2912,7 +2933,7 @@
             }
 
             //check if we can correct data using total users correction
-            if (_periodObj.periodContainsToday && estOverrideMetric && countlyTotalUsers.isUsable()) {
+            if (estOverrideMetric && countlyTotalUsers.isUsable()) {
                 for (i = 0; i < unique.length; i++) {
                     if (estOverrideMetric[unique[i]] && countlyTotalUsers.get(estOverrideMetric[unique[i]]).users) {
                         dataArr[unique[i]].isEstimate = false;
@@ -3018,7 +3039,13 @@
                 format = format.replace("MMM D", "MMM D[일]").replace("D MMM", "MMM D[일]");
             }
             else if (countlyCommon.BROWSER_LANG_SHORT.toLowerCase() === "ja") {
-                format = format.replace("MMM D", "MMM D[日]").replace("D MMM", "MMM D[日]");
+                format = format
+                    .replace("D MMM YYYY", "YYYY年 MMM D")
+                    .replace("MMM D, YYYY", "YYYY年 MMM D")
+                    .replace("D MMM, YYYY", "YYYY年 MMM D")
+                    .replace("MMM YYYY", "YYYY年 MMM")
+                    .replace("MMM D", "MMM D[日]")
+                    .replace("D MMM", "MMM D[日]");
             }
             else if (countlyCommon.BROWSER_LANG_SHORT.toLowerCase() === "zh") {
                 format = format.replace("MMMM", "M").replace("MMM", "M").replace("MM", "M").replace("DD", "D").replace("D M, YYYY", "YYYY M D").replace("D M", "M D").replace("D", "D[日]").replace("M", "M[月]").replace("YYYY", "YYYY[年]");
@@ -3145,23 +3172,12 @@
                 dateString = "HH:mm";
                 numberOfDays = 1;
                 break;
-            case "7days":
-                numberOfDays = daysInPeriod = 7;
-                break;
-            case "30days":
-                numberOfDays = daysInPeriod = 30;
-                break;
-            case "60days":
-                numberOfDays = daysInPeriod = 60;
-                break;
-            case "90days":
-                numberOfDays = daysInPeriod = 90;
-                break;
             default:
                 if (/([0-9]+)days/.test(period)) {
                     var match = /([0-9]+)days/.exec(period);
                     if (match[1]) {
                         numberOfDays = daysInPeriod = parseInt(match[1]);
+                        isSpecialPeriod = true;
                     }
                 }
                 break;
@@ -3206,6 +3222,7 @@
                     numberOfDays = daysInPeriod = b.diff(a, 'days') + 1;
                     rangeEndDay = period[1];
                     periodContainsToday = (b.format("YYYYMMDD") === now.format("YYYYMMDD"));
+                    isSpecialPeriod = true;
                 }
             }
 
@@ -3260,7 +3277,6 @@
                 }
 
                 dateString = (yearChanged) ? "D MMM, YYYY" : "D MMM";
-                isSpecialPeriod = true;
             }
 
             periodObj = {
@@ -3702,7 +3718,7 @@
                 timeLeft = timeLeft % dict[i].v;
             }
             var dayTrans = result.day > 1 ? jQuery.i18n.map["common.day.abrv"] : jQuery.i18n.map["common.day.abrv2"];
-            return (result.day > 0 ? result.day + " " + dayTrans + ',' : '') +
+            return (result.day > 0 ? result.day + " " + dayTrans + ' ' : '') +
                 (result.hour >= 10 ? result.hour + ':' : ('0' + result.hour) + ":") +
                 (result.minute >= 10 ? result.minute + ':' : ('0' + result.minute) + ':') +
                 (result.second >= 10 ? result.second : ('0' + result.second));

@@ -331,7 +331,7 @@ window.countlyManagementView = countlyView.extend({
      * @param {string} error - error message to show
      */
     showError: function(error) {
-        CountlyHelpers.alert(error);
+        CountlyHelpers.alert(error, 'popStyleGreen', {title: jQuery.i18n.map['management-applications.plugins.smth'], image: 'empty-icon', button_title: jQuery.i18n.map['management-applications.plugins.ok']});
     },
 
     /**
@@ -623,6 +623,7 @@ var AppRouter = Backbone.Router.extend({
         countlyCommon.setActiveApp(app_id);
 
         $("#active-app-name").text(countlyGlobal.apps[app_id].name);
+        $("#active-app-name").attr('title', countlyGlobal.apps[app_id].name);
         $("#active-app-icon").css("background-image", "url('" + countlyGlobal.path + "appimages/" + app_id + ".png')");
 
         app.onAppSwitch(app_id, true);
@@ -652,6 +653,7 @@ var AppRouter = Backbone.Router.extend({
                     countlyCommon.setActiveApp(app_id);
 
                     $("#active-app-name").text(countlyGlobal.apps[app_id].name);
+                    $("#active-app-name").attr('title', countlyGlobal.apps[app_id].name);
                     $("#active-app-icon").css("background-image", "url('" + countlyGlobal.path + "appimages/" + app_id + ".png')");
 
                     app.onAppSwitch(app_id);
@@ -661,6 +663,10 @@ var AppRouter = Backbone.Router.extend({
                     return;
                 }
             }
+        }
+        else if (Backbone.history.fragment.indexOf("/0/") === 0 && countlyGlobal.apps[countlyCommon.ACTIVE_APP_ID]) {
+            this.navigate("#/" + countlyCommon.ACTIVE_APP_ID + Backbone.history.fragment.replace("/0", ""), true);
+            return;
         }
         else if (Backbone.history.fragment !== "/" && countlyGlobal.apps[countlyCommon.ACTIVE_APP_ID]) {
             $("#" + countlyGlobal.apps[countlyCommon.ACTIVE_APP_ID].type + "-type a").each(function() {
@@ -899,6 +905,13 @@ var AppRouter = Backbone.Router.extend({
         }
     },
     initialize: function() { //initialize the dashboard, register helpers etc.
+
+        this.bind("route", function(name/*, args*/) {
+            $('#content').removeClass(function(index, className) {
+                return (className.match(/(^|\s)routename-\S*/g) || []).join(' ');
+            }).addClass("routename-" + name);
+        });
+
         this.appTypes = {};
         this.pageScripts = {};
         this.dataExports = {};
@@ -1202,6 +1215,7 @@ var AppRouter = Backbone.Router.extend({
         });
 
         var self = this;
+        $("body").addClass("lang-" + countlyCommon.BROWSER_LANG_SHORT);
         jQuery.i18n.properties({
             name: 'locale',
             cache: true,
@@ -1469,6 +1483,10 @@ var AppRouter = Backbone.Router.extend({
                 countlyCommon.BROWSER_LANG_SHORT = langCode;
                 countlyCommon.BROWSER_LANG = langCode;
 
+                $("body").removeClass(function(index, className) {
+                    return (className.match(/(^|\s)lang-\S*/g) || []).join(' ');
+                }).addClass("lang-" + langCode);
+
                 try {
                     moment.locale(countlyCommon.BROWSER_LANG_SHORT);
                 }
@@ -1691,7 +1709,7 @@ var AppRouter = Backbone.Router.extend({
                 $('.note-popup:visible .note-content').textcounter({
                     max: 50,
                     countDown: true,
-                    countDownText: "remaining "
+                    countDownText: jQuery.i18n.map["dashboard.note-title-remaining"] + ": ",
                 });
 
                 $(".note-popup:visible .note .delete-note").on("click", function() {
@@ -1764,6 +1782,11 @@ var AppRouter = Backbone.Router.extend({
                             else {
                                 updateGlobalNotes({ date_id: dateId, note: result }, "create");
                                 app.activeView.refresh();
+                                app.recordEvent({
+                                    "key": "graph-note",
+                                    "count": 1,
+                                    "segmentation": {}
+                                });
                             }
                         }
                     });
@@ -1893,6 +1916,7 @@ var AppRouter = Backbone.Router.extend({
 
                 $("#active-app-icon").css("background-image", appImage);
                 $("#active-app-name").text(appName);
+                $("#active-app-name").attr('title', appName);
 
                 if (self.activeAppKey !== appKey) {
                     self.activeAppName = appName;
@@ -1952,6 +1976,7 @@ var AppRouter = Backbone.Router.extend({
             else {
                 $("#active-app-icon").css("background-image", "url('" + countlyGlobal.cdn + "appimages/" + countlyCommon.ACTIVE_APP_ID + ".png')");
                 $("#active-app-name").text(countlyGlobal.apps[countlyCommon.ACTIVE_APP_ID].name);
+                $('#active-app-name').attr('title', countlyGlobal.apps[countlyCommon.ACTIVE_APP_ID].name);
                 self.activeAppName = countlyGlobal.apps[countlyCommon.ACTIVE_APP_ID].name;
             }
         }
@@ -2076,6 +2101,12 @@ var AppRouter = Backbone.Router.extend({
         * @returns {number} number representating date
         */
         function getCustomDateInt(s) {
+            if (s.indexOf("W") === 0) {
+                s = s.replace(",", "");
+                s = s.replace("W", "");
+                dateParts = s.split(" ");
+                return (parseInt(dateParts[0])) + parseInt(dateParts.pop() * 10000);
+            }
             s = moment(s, countlyCommon.getDateFormat(countlyCommon.periodObj.dateString)).format(countlyCommon.periodObj.dateString);
             var dateParts = "";
             if (s.indexOf(":") !== -1) {
@@ -2288,7 +2319,7 @@ var AppRouter = Backbone.Router.extend({
             countlyCommon.dtSettings = countlyCommon.dtSettings || [];
 
             var previosTableStatus = countlyCommon.dtSettings.filter(function(item) {
-                return (item.viewId === app.activeView.cid | (item.viewId === app.activeView.cid && item.selector === settings.sTableId));
+                return (item.viewId === app.activeView.cid && item.selector === settings.sTableId);
             })[0];
 
             if (previosTableStatus) {
@@ -2310,7 +2341,7 @@ var AppRouter = Backbone.Router.extend({
         */
         function setCurrentPage(dtable, settings) {
             var tablePersistSettings = countlyCommon.dtSettings.filter(function(item) {
-                return (item.viewId === app.activeView.cid | (item.viewId === app.activeView.cid && item.selector === settings.sTableId));
+                return (item.viewId === app.activeView.cid && item.selector === settings.sTableId);
             })[0];
 
             if (tablePersistSettings && tablePersistSettings.dataLength === dtable.fnGetData().length) {
@@ -2329,7 +2360,7 @@ var AppRouter = Backbone.Router.extend({
             }
 
             var tablePersistSettings = pageSizeSettings.filter(function(item) {
-                return (item.viewId === app.activeView.cid | (item.viewId === app.activeView.cid && item.selector === settings.sTableId));
+                return (item.viewId === app.activeView.cid && item.selector === settings.sTableId);
             })[0];
 
             var pageSize;
@@ -2392,6 +2423,9 @@ var AppRouter = Backbone.Router.extend({
                         tableWrapper.show();
                     }
                 });
+
+                var selectButton = "<div class='select-column-table-data' style='display:none;'><p class='ion-gear-a'></p></div>";
+                $(selectButton).insertBefore(tableWrapper.find(".dataTables_filter"));
 
                 $(saveHTML).insertBefore(tableWrapper.find(".DTTT_container"));
                 $(searchHTML).insertBefore(tableWrapper.find(".dataTables_filter"));
@@ -2472,6 +2506,29 @@ var AppRouter = Backbone.Router.extend({
                     else {
                         tableWrapper.find(".dataTables_length").hide();
                         //create export dialog
+                        var item = tableWrapper.find('.save-table-data')[0];
+                        if (item) {
+                            exportDrop = new CountlyDrop({
+                                target: tableWrapper.find('.save-table-data')[0],
+                                content: "",
+                                position: 'right middle',
+                                classes: "server-export",
+                                constrainToScrollParent: false,
+                                remove: true,
+                                openOn: "click"
+                            });
+                            exportDrop.on("open", function() {
+                                $(".server-export .countly-drop-content").empty().append(CountlyHelpers.tableExport(dtable, { api_key: countlyGlobal.member.api_key }, null, oSettings).removeClass("dialog"));
+                                exportDrop.position();
+                            });
+                        }
+                    }
+                }
+                else {
+                    tableWrapper.find(".dataTables_length").hide();
+                    //create export dialog
+                    var item2 = tableWrapper.find('.save-table-data')[0];
+                    if (item2) {
                         exportDrop = new CountlyDrop({
                             target: tableWrapper.find('.save-table-data')[0],
                             content: "",
@@ -2481,29 +2538,12 @@ var AppRouter = Backbone.Router.extend({
                             remove: true,
                             openOn: "click"
                         });
+
                         exportDrop.on("open", function() {
-                            $(".server-export .countly-drop-content").empty().append(CountlyHelpers.tableExport(dtable, { api_key: countlyGlobal.member.api_key }, null, oSettings).removeClass("dialog"));
+                            $(".server-export .countly-drop-content").empty().append(CountlyHelpers.tableExport(dtable, { api_key: countlyGlobal.member.api_key }).removeClass("dialog"));
                             exportDrop.position();
                         });
                     }
-                }
-                else {
-                    tableWrapper.find(".dataTables_length").hide();
-                    //create export dialog
-                    exportDrop = new CountlyDrop({
-                        target: tableWrapper.find('.save-table-data')[0],
-                        content: "",
-                        position: 'right middle',
-                        classes: "server-export",
-                        constrainToScrollParent: false,
-                        remove: true,
-                        openOn: "click"
-                    });
-
-                    exportDrop.on("open", function() {
-                        $(".server-export .countly-drop-content").empty().append(CountlyHelpers.tableExport(dtable, { api_key: countlyGlobal.member.api_key }).removeClass("dialog"));
-                        exportDrop.position();
-                    });
                 }
 
                 //tableWrapper.css({"min-height": tableWrapper.height()});
@@ -3306,6 +3346,7 @@ Backbone.history.checkUrl = function() {
             // but it is not currently selected app, so let' switch
             countlyCommon.setActiveApp(app_id);
             $("#active-app-name").text(countlyGlobal.apps[app_id].name);
+            $('#active-app-name').attr('title', countlyGlobal.apps[app_id].name);
             $("#active-app-icon").css("background-image", "url('" + countlyGlobal.path + "appimages/" + app_id + ".png')");
         }
     }

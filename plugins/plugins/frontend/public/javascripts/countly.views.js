@@ -282,7 +282,7 @@ window.ConfigurationsView = countlyView.extend({
                 select += '<div class="text"></div>';
             }
             else {
-                select += '<div class="text"><div class="flag" style="background-image:url(images/flags/' + value.toLowerCase() + '.png)"></div>' + zones[value].n + '</div>';
+                select += '<div class="text"><div class="flag ' + value.toLowerCase() + '" style="background-image:url(images/flags/' + value.toLowerCase() + '.png)"></div>' + zones[value].n + '</div>';
             }
 
             select += '</div>' +
@@ -292,7 +292,7 @@ window.ConfigurationsView = countlyView.extend({
                 '<div>';
 
             for (var i in zones) {
-                select += '<div data-value="' + i + '" class="segmentation-option item"><div class="flag" style="background-image:url(images/flags/' + i.toLowerCase() + '.png)"></div>' + zones[i].n + '</div>';
+                select += '<div data-value="' + i + '" class="segmentation-option item"><div class="flag ' + i.toLowerCase() + '" style="background-image:url(images/flags/' + i.toLowerCase() + '.png)"></div>' + zones[i].n + '</div>';
             }
 
             select += '</div>' +
@@ -344,7 +344,7 @@ window.ConfigurationsView = countlyView.extend({
                 select += '<div class="text" data-localize="configs.logs.' + value + '">' + jQuery.i18n.map["configs.logs." + value] + '</div>';
             }
             else {
-                select += '<div class="text" data-localzie="configs.logs.warn">' + jQuery.i18n.map["configs.logs.warn"] + '</div>';
+                select += '<div class="text" data-localize="configs.logs.warn">' + jQuery.i18n.map["configs.logs.warn"] + '</div>';
             }
             select += '</div>' +
                 '<div class="right combo"></div>' +
@@ -373,6 +373,8 @@ window.ConfigurationsView = countlyView.extend({
         this.registerInput("apps.timezone", function() {
             return null;
         });
+
+        this.registerLabel("frontend.google_maps_api_key", "configs.frontend-google_maps_api_key");
     },
     beforeRender: function() {
         if (this.template) {
@@ -491,6 +493,14 @@ window.ConfigurationsView = countlyView.extend({
                     attrID = $(this).attr("id");
 
                 self.updateConfig(attrID, isChecked);
+            });
+
+            //numeric input on arrow click
+            $('.configs input[type="number"]').on("change", function() {
+                var id = $(this).attr("id");
+                var value = $(this).val();
+                value = parseFloat(value);
+                self.updateConfig(id, value);
             });
 
             $(".configs input").keyup(function() {
@@ -794,6 +804,39 @@ window.ConfigurationsView = countlyView.extend({
                 }
             });
 
+            $("#delete_account_password").keyup(function() {
+                $('#password-input-mandatory-warning').css('visibility', 'hidden');
+            });
+            $("#delete-user-account-button").click(function() {
+                var pv = $("#delete_account_password").val();
+                pv = pv.trim();
+                if (pv === "") {
+                    $('#password-input-mandatory-warning').css('visibility', 'visible');
+                }
+                else {
+                    var text = jQuery.i18n.map["user-settings.delete-account-confirm"];
+                    CountlyHelpers.confirm(text, "popStyleGreen", function(result) {
+                        if (!result) {
+                            return true;
+                        }
+                        countlyPlugins.deleteAccount({password: pv}, function(err, msg) {
+                            if (msg === true || msg === 'true') {
+                                window.location = "/login"; //deleted. go to login
+                            }
+                            else if (msg === 'password not valid' || msg === 'password mandatory' || msg === 'global admin limit') {
+                                var msg1 = {title: jQuery.i18n.map["common.error"], message: jQuery.i18n.map["user-settings." + msg], sticky: true, clearAll: true, type: "error"};
+                                CountlyHelpers.notify(msg1);
+                            }
+                            else if (err === true) {
+                                var msg2 = {title: jQuery.i18n.map["common.error"], message: msg, sticky: true, clearAll: true, type: "error"};
+                                CountlyHelpers.notify(msg2);
+                            }
+                        });
+                    }, [jQuery.i18n.map["common.no-dont-continue"], jQuery.i18n.map["common.yes"]], { title: jQuery.i18n.map["user-settings.delete-account-title"], image: "delete-user" });
+                }
+
+            });
+
 
             $('#search-box').off('input').on('input', function() {
                 var searchKey = $(this).val().toLowerCase();
@@ -851,6 +894,8 @@ window.ConfigurationsView = countlyView.extend({
                     $fixedHeader.css({ width: width });
                 }
             });
+
+            $("#config-row-google_maps_api_key-frontend").parent().append($("#config-row-google_maps_api_key-frontend"));
         }
     },
     updateConfig: function(id, value) {
@@ -1196,6 +1241,9 @@ if (countlyGlobal.member.global_admin) {
             initialize: function() {
                 this.plugin = this.key;
             },
+            resetTemplateData: function() {
+                this.template = Handlebars.compile(this.generateTemplate(this.key));
+            },
             generateTemplate: function(id) {
                 var fields = '';
                 this.configsData = countlyPlugins.getConfigsData();
@@ -1210,7 +1258,7 @@ if (countlyGlobal.member.global_admin) {
                         if (appConfigData && typeof appConfigData[i] !== "undefined") {
                             myvalue = appConfigData[i];
                         }
-                        else if (typeof this.configsData[id][i] !== "undefined") {
+                        else if (this.configsData && this.configsData[id] && typeof this.configsData[id][i] !== "undefined") {
                             myvalue = this.configsData[id][i];
                         }
                         this.templateData[i] = myvalue;

@@ -12,6 +12,7 @@ var reportsInstance = {},
     countlyCommon = require('../../../api/lib/countly.common.js'),
     localize = require('../../../api/utils/localization.js'),
     common = require('../../../api/utils/common.js'),
+    log = require('../../../api/utils/log')('reports:reports'),
     versionInfo = require('../../../frontend/express/version.info');
 
 versionInfo.page = (!versionInfo.title) ? "https://count.ly" : null;
@@ -80,12 +81,20 @@ var metrics = {
          * @param {func} cb - callback function
          */
         function findMember(cb) {
-            db.collection('members').findOne({_id: db.ObjectID(report.user)}, function(err, member) {
-                if (err) {
-                    return cb(err);
+            db.collection('members').findOne({_id: db.ObjectID(report.user)}, function(err1, member) {
+                if (!err1 && member) {
+                    return cb(null, member);
                 }
 
-                return cb(null, member);
+                db.collection('members').findOne({global_admin: true}, function(err2, globalAdmin) {
+                    if (!err2 && globalAdmin) {
+                        log.d("Report user not found. Updating it to the global admin.");
+                        report.user = globalAdmin._id;
+                        return cb(null, globalAdmin);
+                    }
+
+                    return cb(err2);
+                });
             });
         }
         /**
@@ -96,7 +105,8 @@ var metrics = {
             if (versionInfo.title.indexOf("Countly") > -1) {
                 var options = {
                     uri: 'http://count.ly/email-news.txt',
-                    method: 'GET'
+                    method: 'GET',
+                    timeout: 1000
                 };
 
                 request(options, function(error, response, body) {
@@ -186,6 +196,7 @@ var metrics = {
                                     fetch.getTimeObj(metric, params, {db: db}, function(output) {
                                         fetch.getTotalUsersObj(metric, params, function(dbTotalUsersObj) {
                                             output.correction = fetch.formatTotalUsersObj(dbTotalUsersObj);
+                                            output.prev_correction = fetch.formatTotalUsersObj(dbTotalUsersObj, true);
                                             done2(null, {metric: metric, data: output});
                                         });
                                     });
@@ -241,7 +252,7 @@ var metrics = {
                     }
                 }
                 if (err || !data[0]) {
-                    return callback("No data to report", {report: report});
+                    return callback("Report user not found.", {report: report});
                 }
 
                 var member = data[0];
@@ -316,7 +327,11 @@ var metrics = {
                                 countlyCommon.setTimezone(results[i].timezone);
                                 for (var j in results[i].results) {
                                     if (j === "users") {
-                                        results[i].results[j] = getSessionData(results[i].results[j] || {}, (results[i].results[j] && results[i].results[j].correction) ? results[i].results[j].correction : {});
+                                        results[i].results[j] = getSessionData(
+                                            results[i].results[j] || {},
+                                            (results[i].results[j] && results[i].results[j].correction) ? results[i].results[j].correction : {},
+                                            (results[i].results[j] && results[i].results[j].prev_correction) ? results[i].results[j].prev_correction : {}
+                                        );
                                         if (results[i].results[j].total_sessions.total > 0) {
                                             results[i].display = true;
                                         }
@@ -502,9 +517,10 @@ var metrics = {
     * get session data 
     * @param {object} _sessionDb - session original data
     * @param {object} totalUserOverrideObj - user data 
+    * @param {object} previousTotalUserOverrideObj - user data for previous period
     * @return {object} dataArr - session statstics contains serveral metrics.
     */
-    function getSessionData(_sessionDb, totalUserOverrideObj) {
+    function getSessionData(_sessionDb, totalUserOverrideObj, previousTotalUserOverrideObj) {
         //Update the current period object in case selected date is changed
         _periodObj = countlyCommon.periodObj;
 
@@ -636,6 +652,7 @@ var metrics = {
         }
 
         currentUnique = (totalUserOverrideObj && totalUserOverrideObj.users) ? totalUserOverrideObj.users : currentUnique;
+        previousUnique = (previousTotalUserOverrideObj && previousTotalUserOverrideObj.users) ? previousTotalUserOverrideObj.users : previousUnique;
 
         if (currentUnique < currentNew) {
             if (totalUserOverrideObj && totalUserOverrideObj.users) {

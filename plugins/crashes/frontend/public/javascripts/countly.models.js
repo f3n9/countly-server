@@ -278,6 +278,11 @@
                 if (callback) {
                     callback(true);
                 }
+                app.recordEvent({
+                    "key": "crash-comment",
+                    "count": 1,
+                    "segmentation": {}
+                });
             },
             error: function() {
                 if (callback) {
@@ -729,8 +734,7 @@
                 data.crt.change = "-∞";
             }
         }
-
-        data.crt.total = parseFloat(data.crt.total.toFixed(2));
+        data.crt.total = parseFloat(data.crt.total.toFixed(3));
         data.crt["total-fatal"] = parseFloat(data.crt["total-fatal"].toFixed(2));
         data.crt["total-nonfatal"] = parseFloat(data.crt["total-nonfatal"].toFixed(2));
         return {usage: data};

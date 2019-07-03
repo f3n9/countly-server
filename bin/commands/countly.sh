@@ -39,16 +39,157 @@ countly_root (){
 }
 
 #real commands, can also be overwritten
-countly_upgrade (){ 
+
+run_upgrade (){
+    if [ $2 == "fs" ]
+    then
+        echo "Upgrading filesystem versions: $1";
+    elif [ $2 == "db" ]
+    then
+        echo "Upgrading database versions: $1";
+    else
+        echo "Upgrading versions: $1";
+    fi
+    arr=$@;
+    for i in ${1//;/ }
+    do
+        if [ $2 == "fs" ]
+        then
+            if [ -f $DIR/../upgrade/$i/upgrade_fs.sh ]; then
+                if [[ " ${arr[*]} " != *" -y "* ]]; then
+                    echo "Upgrading filesystem for $i. y/n?";
+                    read choice;
+                    if [ $choice != "y"]; then
+                        continue
+                    fi
+                fi
+                bash $DIR/../upgrade/$i/upgrade_fs.sh;
+            else
+                echo "No filesystem upgrade script provided for $i";
+            fi
+        elif [ $2 == "db" ]
+        then
+            if [ -f $DIR/../upgrade/$i/upgrade_db.sh ]; then
+                if [[ " ${arr[*]} " != *" -y "* ]]; then
+                    echo "Upgrading database for $i. y/n?";
+                    read choice;
+                    if [ $choice != "y"]; then
+                        continue
+                    fi
+                fi
+                bash $DIR/../upgrade/$i/upgrade_db.sh;
+            else
+                echo "No database upgrade script provided for $i";
+            fi
+        else
+            if [ -f $DIR/../upgrade/$i/upgrade.sh ]; then
+                if [[ " ${arr[*]} " != *" -y "* ]]; then
+                    echo "Upgrading for $i. y/n?";
+                    read choice;
+                    if [ $choice != "y" ]; then
+                        continue
+                    fi
+                fi
+                bash $DIR/../upgrade/$i/upgrade.sh;
+            else
+                echo "No upgrade script provided for $i";
+            fi
+        fi
+    done
+}
+countly_upgrade (){
+    arr=("$@");
+    if [[ " ${arr[*]} " == *" -y "* ]]; then
+        y="-y";
+    fi
     countly_root ;
-    (cd $DIR/../.. ;
-    echo "Installing dependencies...";
-    sudo npm install ;
-    echo "Preparing production files...";
-    grunt dist-all;
-    echo "Restarting Countly...";
-    countly restart;
-    )
+    if [ $# -eq 0 ]
+    then
+        (cd $DIR/../.. ;
+        echo "Installing dependencies...";
+        sudo npm install ;
+        echo "Preparing production files...";
+        grunt dist-all;
+        echo "Restarting Countly...";
+        countly restart;
+        )
+    elif [ $1 == "auto" ]
+    then
+        UPGRADE=$(nodejs $DIR/../scripts/checking_versions.js);
+        if [ $? -eq 0 ]
+        then
+            run_upgrade $UPGRADE $2 $y;
+        else
+            echo $UPGRADE;
+        fi
+    elif [ $1 == "version" ]
+    then
+        if [ $# -eq 3 ] || [ $# -eq 4 ]
+        then
+            if [ $2 == "fs" ] || [ $2 == "db" ]
+            then
+                UPGRADE=$(nodejs $DIR/../scripts/checking_versions.js $3 $4);
+            elif [ $# -ge 3 ]
+            then
+                UPGRADE=$(nodejs $DIR/../scripts/checking_versions.js $2 $3);
+            fi
+            if [ $? -eq 0 ]
+            then
+                run_upgrade $UPGRADE $2 $y;
+            else
+                echo $UPGRADE;
+            fi
+        else
+            echo "Provide upgrade version in format:";
+            echo "    countly upgrade version <from> <to>";
+            echo "    countly upgrade version fs <from> <to>";
+            echo "    countly upgrade version db <from> <to>";
+        fi
+    elif [ $1 == "list" ]
+    then
+        if [ $# -eq 2 ] && [ $2 == "auto" ]
+        then
+            echo $(nodejs $DIR/../scripts/checking_versions.js);
+        elif [ $# -eq 3 ]
+        then        
+            echo $(nodejs $DIR/../scripts/checking_versions.js $2 $3);
+        else
+            echo "Provide upgrade version in formats:";
+            echo "    countly upgrade list auto";
+            echo "    countly upgrade list <from> <to>";
+        fi
+    elif [ $1 == "run" ]
+    then
+        if [ $2 == "fs" ] || [ $2 == "db" ]
+        then
+            run_upgrade $3 $2 $y;
+        elif [ $# -ge 2 ]
+        then
+            run_upgrade $2 upgrade $y;
+        else
+            echo "Provide upgrade version in formats:";
+            echo "    countly upgrade run <version>";
+            echo "    countly upgrade run fs <version>";
+            echo "    countly upgrade run db <version>";
+        fi
+    elif [ $1 == "help" ]
+    then
+        echo "countly upgrade usage:"
+        echo "    countly upgrade                                  # prepare production files and restart process";
+        echo "    countly upgrade auto [-y]                        # automatically run all upgrade scripts between marked and current versions";
+        echo "    countly upgrade auto fs [-y]                     # automatically run all file system upgrade scripts between marked and current versions";
+        echo "    countly upgrade auto db [-y]                     # automatically run all database upgrade scripts between marked and current versions";
+        echo "    countly upgrade list auto                        # list all version upgrades that will be used in auto upgrade";
+        echo "    countly upgrade list <from_version> <to_version> # list all version upgrades that will be used upgrading from and to provided version";
+        echo "    countly upgrade run <version> [-y]               # run specific version upgrade script"; 
+        echo "    countly upgrade run fs <version> [-y]            # run specific version file upgrade script";
+        echo "    countly upgrade run db <version> [-y]            # run specific version database script";
+        echo "    countly upgrade version <from> <to> [-y]         # run all upgrade scripts between provided versions";
+        echo "    countly upgrade version fs <from> <to> [-y]      # run all filesystem upgrade scripts between provided versions";
+        echo "    countly upgrade version db <from> <to> [-y]      # run all database upgrade scripts between provided versions";
+        echo "    countly upgrade help                             # this command";
+        echo "    countly upgrade help                             # this command";
+    fi
 }
 
 countly_version (){
@@ -147,6 +288,53 @@ countly_backup (){
     countly_backupdb "$@";
 }
 
+countly_save (){
+    if [ $# -eq 1 ]
+    then
+        echo "Please provide destination path";
+        return 0;
+    fi
+
+    if [ $# -lt 2 ]
+    then
+        echo "Please provide file paths" ;
+        return 0;
+    fi
+
+    if [ ! -d $2 ]
+    then
+        mkdir -p $2
+    fi
+    
+    if [ -f $1 ]
+    then
+        match=false
+        files=$(ls $2 | wc -l)
+        
+        if [ $files -gt 0 ]
+        then
+            for d in $2/*; do
+                diff=$(diff $1 $d | wc -l)
+                if [ $diff == 0 ]
+                then
+                    match=true
+                    break
+                fi
+            done
+        fi
+
+        files=$((files+1))
+        filebasename=$(basename $1)
+        if [ "$match" == false ]
+        then
+            cp -a $1 $2/${filebasename}.backup.${files}
+        fi
+
+    else
+        echo "The file does not exist"
+    fi
+}
+        
 countly_restorefiles (){
     if [ $# -eq 0 ]
     then
@@ -280,9 +468,11 @@ else
     echo "    countly restorefiles path/to/backup # restores user/config files from provided backup";
     echo "    countly restoredb path/to/backup # restores countly db from provided backup";
     echo "    countly restore path/to/backup # restores countly db and config files from provided backup";
+    echo "    countly save path/to/file /path/to/destination # copies the given file to the destination if no file with same data is present at the destination";
     countly api ;
     countly plugin ;
     countly update ;
     countly config ;
+    countly upgrade help ;
     echo "";
 fi

@@ -14,6 +14,8 @@ const versionInfo = require('../frontend/express/version.info');
 var t = ["countly:", "api"];
 
 if (cluster.isMaster) {
+    console.log("Starting master");
+    common.db = plugins.dbConnection();
     t.push("master");
     t.push("node");
     t.push(process.argv[1]);
@@ -201,9 +203,6 @@ const passToMaster = (worker) => {
 };
 
 if (cluster.isMaster) {
-    console.log("Starting master");
-    common.db = plugins.dbConnection();
-
     const workerCount = (countlyConfig.api.workers)
         ? countlyConfig.api.workers
         : os.cpus().length;
@@ -288,7 +287,7 @@ else {
             const headers = {};
             headers["Access-Control-Allow-Origin"] = "*";
             headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS";
-            headers["Access-Control-Allow-Headers"] = "countly-token";
+            headers["Access-Control-Allow-Headers"] = "countly-token, Content-Type";
             res.writeHead(200, headers);
             res.end();
         }
