@@ -40,6 +40,134 @@ var countlyConfig = {
 	mongodb: "mongodb://localhost:27017/countly",
     */
     /**
+     * Redis configuration. 
+     * @property {string} host - host of redis, ip or hostname
+     * @property {number} port - port of redis
+     * @property {string} instanceId - redis instance id in Tencent cloud
+     * @property {string} pwd - password of redis
+     */
+    redis: {
+        host: "10.112.68.14",
+        port: 6379,
+        instanceId: "",
+        pwd: "stage!redis",
+    },
+
+    /**
+     * Define events of apps which will be published to Redis
+     * NOTE!!! you must provide 'redis' configuration before use this option.
+     * @property {string} redis_pub_topic - the topic of publish events in Redis.
+     * @property {array=} apps - the array of applications, include app_id and filter_keys.
+     *      @property {string} app_id - App Id that defined in Countly, which can be found from 'Management -> Applications'
+     *      @property {array=} filter_keys - Each application can have multiple filters, relationship is 'OR' among them,
+     *                                      which means each item of 'filter_keys' can get a kind of records.
+     *          @property {array=} object - key/value pair, the record must match all of the filters.
+     *                                      {string} key - the property path of Countly Event.
+     *                                      {array=} values - multiple values, matches one is ok (relation is 'OR').
+     *                                                       NOTE: item of values support regex.
+     * Tips: 
+     *  1. If 'apps' is empty(set to []), means filter nothing, no records will be published.
+     *  2. if 'filter_keys' is empty (set to []), means publish all events of the 'app_id'
+     */
+    yx_event_publish: {
+        redis_pub_topic: "countly-event-pub",
+        apps: [
+            {
+                app_id: "5c32fa238e46dd00526ee6c3", // MacOS 
+                filter_keys: [
+                    [ /** event of paywall */
+                        {key: "event.segmentation.ec", values: ["^upgrade_(basic|plus|premium)$"]}, // AND
+                        {key: "event.segmentation.ea", values: ["^(click|saw)_upsell$"]},
+                        {key: "event.segmentation.el", values: ["^ctxt_bulkupload_dialog_(singleaction|singlenote)$", 
+                                                                "^ctxt_docsearch_dialog_(attach|drag)$",
+                                                                "^ctxt_mytemplate$", "^ctxt_nearquota_dialog_250mbleft$",
+                                                                "^ctxt_notehistory_dialog_intro$",
+                                                                "^ctxt_(notesize|overquota)_dialog_exceeded$",
+                                                                "^ctxt_(pdf|presentationmode)_trial_(expired|expiring14|expiring7|start)$"
+                                                                ]},
+                    ], // OR
+                ],
+            },
+            {
+                app_id: "5c33236d4c70d50044982d20", // iOS
+                filter_keys: [
+                    [
+                        {key: "event.segmentation.category", values: ["^upgrade_(basic|plus|premium)$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^(click|saw)_upsell$"]},
+                        {key: "event.segmentation.label", values: ["^ctxt_businesscard_trial_(over|start)$",
+                                                                "^ctxt_mytemplate$", "^ctxt_notesize_banner_(notecontent|notelist)$",
+                                                                "^ctxt_notesize_dialog_(attachImage|background|noUpsellAdd|noUpsellSync|reprompt)$",
+                                                                "^ctxt_offline_notebook_after_creation$",
+                                                                "^ctxt_pdf_trial_(expiring|start)$",
+                                                                "^ctxt_pdfAnnotation_pdfViewIcon$",
+                                                                "^(entry_source: |)perm_offline_(notebok_list|toggle_notelist)$"]},
+                    ],
+                ],
+            },
+            {
+                app_id: "5c3323ac8e46dd00526ee6c7", // Android
+                filter_keys: [
+                    [
+                        {key: "event.key", values: ["^upgrade_(basic|plus|premium)$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^(click|saw)_upsell$"]},
+                        {key: "event.segmentation.label", values: ["^ctxt_businesscard_overlay_unlock$", "^ctxt_docsearch_dialog_attach$",
+                                                                "^ctxt_template$", "^ctxt_nearquota_card_(over75|premium)$",
+                                                                "^ctxt_nearquota_dialog_attach_(plus|premium)$",
+                                                                "^ctxt_notesize_banner_exceeded$", 
+                                                                "^ctxt_offline_(card_isOffline|dialog_3rdNotebook|notification_reminder)$",
+                                                                "^ctxt_overquota_(banner|card)_exceeded$",
+                                                                "^perm_docsearch_emptystate_searchInput$",
+                                                                "^perm_offline_(longpress|overflow|syncpref)_notebook$",
+                                                                "^rglr_docsearch_card_searchInput$",
+                                                                "^rglr_offline_(card_intro|notebook_view_toggle)$"]}
+                    ],
+                    [ // new Android
+                        {key: "event.segmentation.category", values: ["^upgrade_(basic|plus|premium)$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^(click|saw)_upsell$"]},
+                        {key: "event.segmentation.label", values: ["^ctxt_businesscard_overlay_unlock$", "^ctxt_docsearch_dialog_attach$",
+                                                                "^ctxt_template$", "^ctxt_nearquota_card_(over75|premium)$",
+                                                                "^ctxt_nearquota_dialog_attach_(plus|premium)$",
+                                                                "^ctxt_notesize_banner_exceeded$", 
+                                                                "^ctxt_offline_(card_isOffline|dialog_3rdNotebook|notification_reminder)$",
+                                                                "^ctxt_overquota_(banner|card)_exceeded$",
+                                                                "^perm_docsearch_emptystate_searchInput$",
+                                                                "^perm_offline_(longpress|overflow|syncpref)_notebook$",
+                                                                "^rglr_docsearch_card_searchInput$",
+                                                                "^rglr_offline_(card_intro|notebook_view_toggle)$",
+                                                                "^rglr_notebook_dialog_after_creation$", // different part
+                                                                "^ctxt_pdf_trial_(expired|expiring_(11|14|2)|start)$"]}
+                    ],
+                ],
+            },
+            {
+                app_id: "5c2dc53101343000399fad80", // Windows
+                filter_keys: [
+                    [
+                        {key: "event.segmentation.ec", values: ["^upgrade_(basic|plus|premium|unknown)$"]}, // AND
+                        {key: "event.segmentation.ea", values: ["^(click|saw)_upsell$"]},
+                        {key: "event.segmentation.el", values: ["^ctxt_docsearch_dialog_drag$", "^ctxt_mytemplate$",
+                                                                "^ctxt_nearquota_banner_over(50|50_15days|75|95)$",
+                                                                "^ctxt_nearquota_dialog_premium$",
+                                                                "^ctxt_notehistory_dialog_intro$",
+                                                                "^ctxt_notesize_dialog_((after|before)EditResource|exceeded|largeDocument|resource(|s)|tooLargeToCopy)$",
+                                                                "^ctxt_overquota_(banner|dialog)_(exceeded|premium)$",
+                                                                "^ctxt_pdf_trial_(expired|expiring|start)$",
+                                                                "^ctxt_presentationmode_tial_start$"]}
+                    ],
+                ],
+            },
+            /**{
+                app_id: "5c932282f8b97a0039cc29ff", // Web 
+                filter_keys: [
+                    [
+                        {key: "event.segmentation.eventAction", values: []},
+                    ],
+                ],
+            }, */
+        ],
+    },
+
+    /**
     * Default API configuration
     * @type {object} 
     * @property {number} [port=3001] - api port number to use, default 3001
