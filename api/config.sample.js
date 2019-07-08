@@ -3,6 +3,34 @@
 * @module api/config
 */
 
+/** environment: prod, test, dev. Default is 'dev' */
+var env = (null == process.env.NODE_ENV) ? 'dev' : process.env.NODE_ENV;
+
+/** yx app_id config by env */
+var yx_app_id_mapping = {
+    prod: { // production env
+        mac_os: "5c32fa238e46dd00526ee6c3",
+        ios: "5c33236d4c70d50044982d20",
+        android: "5c3323ac8e46dd00526ee6c7",
+        windows: "5c2dc53101343000399fad80",
+        web: "5c932282f8b97a0039cc29ff",
+    },
+    test: { // stage/test env
+        mac_os: "",
+        ios: "",
+        android: "",
+        windows: "",
+        web: "",
+    },
+    dev: { // development env - laptop
+        mac_os: "",
+        ios: "5be2a8d9fd7ee8006350f91a",
+        android: "5d2322e7914aa902af39d41b",
+        windows: "",
+        web: "",
+    }
+},
+
 /** @lends module:api/config */
 var countlyConfig = {
     /**
@@ -73,7 +101,7 @@ var countlyConfig = {
         redis_pub_topic: "countly-event-pub",
         apps: [
             {
-                app_id: "5c32fa238e46dd00526ee6c3", // MacOS 
+                app_id: yx_app_id_mapping[env].mac_os, // MacOS 
                 filter_keys: [
                     [ /** event of paywall */
                         {key: "event.segmentation.ec", values: ["^upgrade_(basic|plus|premium)$"]}, // AND
@@ -89,7 +117,7 @@ var countlyConfig = {
                 ],
             },
             {
-                app_id: "5c33236d4c70d50044982d20", // iOS
+                app_id: yx_app_id_mapping[env].ios, // iOS
                 filter_keys: [
                     [
                         {key: "event.segmentation.category", values: ["^upgrade_(basic|plus|premium)$"]}, // AND
@@ -105,7 +133,7 @@ var countlyConfig = {
                 ],
             },
             {
-                app_id: "5c3323ac8e46dd00526ee6c7", // Android
+                app_id: yx_app_id_mapping[env].android, // Android
                 filter_keys: [
                     [
                         {key: "event.key", values: ["^upgrade_(basic|plus|premium)$"]}, // AND
@@ -140,7 +168,7 @@ var countlyConfig = {
                 ],
             },
             {
-                app_id: "5c2dc53101343000399fad80", // Windows
+                app_id: yx_app_id_mapping[env].windows, // Windows
                 filter_keys: [
                     [
                         {key: "event.segmentation.ec", values: ["^upgrade_(basic|plus|premium|unknown)$"]}, // AND
@@ -157,7 +185,7 @@ var countlyConfig = {
                 ],
             },
             /**{
-                app_id: "5c932282f8b97a0039cc29ff", // Web 
+                app_id: yx_app_id_mapping[env].web, // Web 
                 filter_keys: [
                     [
                         {key: "event.segmentation.eventAction", values: []},
