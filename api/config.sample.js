@@ -6,7 +6,7 @@
 /** environment: prod, test, dev. Default is 'dev' */
 var env = (null == process.env.NODE_ENV) ? 'dev' : process.env.NODE_ENV;
 
-/** yx app_id config by env */
+/** yx app_id config by env. command to set env "export NODE_ENV='dev'" */
 var yx_app_id_mapping = {
     prod: { // production env
         mac_os: "5c32fa238e46dd00526ee6c3",
@@ -29,7 +29,7 @@ var yx_app_id_mapping = {
         windows: "",
         web: "",
     }
-},
+};
 
 /** @lends module:api/config */
 var countlyConfig = {
