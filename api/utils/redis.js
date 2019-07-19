@@ -1,33 +1,30 @@
 /**
  * Redis client
  */
-var rds = require("redis");
+var Redis = require("ioredis");
 
 var redis = {},
     common = require('./common.js');
 
-var host = common.config.redis.host,
-    port = common.config.redis.port,
-    instanceId = common.config.redis.instanceId,
-    password = common.config.redis.pwd;
+var password = common.config.redis.sentinelpwd;
 
 var redisClient;
 
 // initialize redis client
 function initRedis() {
     if (undefined == redisClient || null == redisClient) {
-        redisClient = rds.createClient(port, host, {detect_buffers: true});
+	redisClient = new Redis({
+	    sentinels: [
+		{ host: "redis-ha-announce-0.redis.svc.cluster.local", port: 26379 },
+		{ host: "redis-ha-announce-1.redis.svc.cluster.local", port: 26379 },
+		{ host: "redis-ha-announce-2.redis.svc.cluster.local", port: 26379 }
+	    ],
+	    name: "mymaster",
+	    sentinelPassword: password
+	});
     }
 }
 initRedis(); //init
-// build auth info
-var auth = password;
-if ('' !== instanceId && '' !== password) {
-    auth = instanceId + ":" + password;
-}
-if (undefined != auth && '' !== auth) {
-    redisClient.auth(auth);
-}
 
 // on connected
 redisClient.on("connect", function() {
