@@ -13,15 +13,16 @@ var redisClient;
 // initialize redis client
 function initRedis() {
     if (undefined == redisClient || null == redisClient) {
-	redisClient = new Redis({
+	var jsonarg = {
 	    sentinels: [
 		{ host: "redis-ha-announce-0.redis.svc.cluster.local", port: 26379 },
 		{ host: "redis-ha-announce-1.redis.svc.cluster.local", port: 26379 },
 		{ host: "redis-ha-announce-2.redis.svc.cluster.local", port: 26379 }
 	    ],
-	    name: "mymaster",
-	    sentinelPassword: password
-	});
+	    name: "mymaster"
+	};
+	jsonarg['sentinelPassword'] = password;
+	redisClient = new Redis(jsonarg);
     }
 }
 initRedis(); //init
