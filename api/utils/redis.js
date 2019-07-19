@@ -6,7 +6,8 @@ var Redis = require("ioredis");
 var redis = {},
     common = require('./common.js');
 
-var password = common.config.redis.sentinelpwd;
+var instanceId = common.config.redis.instanceId,
+    password = common.config.redis.sentinelpwd;
 
 var redisClient;
 
@@ -21,11 +22,19 @@ function initRedis() {
 	    ],
 	    name: "mymaster"
 	};
-	jsonarg['sentinelPassword'] = password;
 	redisClient = new Redis(jsonarg);
     }
 }
 initRedis(); //init
+
+// build auth info
+var auth = password;
+if ('' !== instanceId && '' !== password) {
+    auth = instanceId + ":" + password;
+}
+if (undefined != auth && '' !== auth) {
+    redisClient.auth(auth);
+}
 
 // on connected
 redisClient.on("connect", function() {
