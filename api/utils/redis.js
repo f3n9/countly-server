@@ -7,7 +7,7 @@ var redis = {},
     common = require('./common.js');
 
 var instanceId = common.config.redis.instanceId,
-    password = common.config.redis.sentinelpwd;
+    password = common.config.redis.password;
 
 var redisClient;
 
@@ -22,6 +22,11 @@ function initRedis() {
 	    ],
 	    name: "mymaster"
 	};
+        var auth = password;
+        if ('' !== instanceId && '' !== password) {
+            auth = instanceId + ":" + password;
+        }
+	jsonarg["password"] = auth;
 	redisClient = new Redis(jsonarg);
     }
 }
