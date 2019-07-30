@@ -682,8 +682,10 @@ function filterAndPublishEvent(redis, event_obj) {
                 var find_key = event_obj;
                 // step into the innermost key and get its value, assign the value to find_key
                 key_items.forEach(item => {
-                    if (undefined != find_key[item]) {
+                    if (undefined != find_key[item] && null != find_key[item]) {
                         find_key = find_key[item];
+                    } else {
+                        find_key = "null"; // if the value of the key is 'undefined' or null, set it to string 'null'
                     }
                 });
                 if (null == key_values || key_values.length == 0) {
