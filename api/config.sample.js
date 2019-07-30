@@ -114,6 +114,11 @@ var countlyConfig = {
                                                                 "^ctxt_(pdf|presentationmode)_trial_(expired|expiring14|expiring7|start)$"
                                                                 ]},
                     ], // OR
+                    [
+                        {key: "event.segmentation.category", values: ["^Templates$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^click_purchasing_btn$"]},
+                        {key: "event.segmentation.label", values: ["^null$"]},
+                    ],
                 ],
             },
             {
@@ -129,6 +134,11 @@ var countlyConfig = {
                                                                 "^ctxt_pdf_trial_(expiring|start)$",
                                                                 "^ctxt_pdfAnnotation_pdfViewIcon$",
                                                                 "^(entry_source: |)perm_offline_(notebok_list|toggle_notelist)$"]},
+                    ],
+                    [
+                        {key: "event.segmentation.category", values: ["^Templates$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^click_purchasing_btn$"]},
+                        {key: "event.segmentation.label", values: ["^null$"]},
                     ],
                 ],
             },
@@ -165,6 +175,11 @@ var countlyConfig = {
                                                                 "^rglr_notebook_dialog_after_creation$", // different part
                                                                 "^ctxt_pdf_trial_(expired|expiring_(11|14|2)|start)$"]}
                     ],
+                    [
+                        {key: "event.segmentation.category", values: ["^Templates$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^click_purchasing_btn$"]},
+                        {key: "event.segmentation.label", values: ["^null$"]},
+                    ],
                 ],
             },
             {
@@ -181,6 +196,11 @@ var countlyConfig = {
                                                                 "^ctxt_overquota_(banner|dialog)_(exceeded|premium)$",
                                                                 "^ctxt_pdf_trial_(expired|expiring|start)$",
                                                                 "^ctxt_presentationmode_tial_start$"]}
+                    ],
+                    [
+                        {key: "event.segmentation.category", values: ["^Templates$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^click_purchasing_btn$"]},
+                        {key: "event.segmentation.label", values: ["^null$"]},
                     ],
                 ],
             },
