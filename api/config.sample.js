@@ -115,9 +115,9 @@ var countlyConfig = {
                                                                 ]},
                     ], // OR
                     [
-                        {key: "event.segmentation.category", values: ["^Templates$"]}, // AND
-                        {key: "event.segmentation.action", values: ["^click_purchasing_btn$"]},
-                        {key: "event.segmentation.label", values: ["^null$"]},
+                        {key: "event.segmentation.ec", values: ["^Templates$"]}, // AND
+                        {key: "event.segmentation.ea", values: ["^click_purchasing_btn$"]},
+                        {key: "event.segmentation.el", values: ["^null$"]},
                     ],
                 ],
             },
@@ -175,7 +175,12 @@ var countlyConfig = {
                                                                 "^rglr_notebook_dialog_after_creation$", // different part
                                                                 "^ctxt_pdf_trial_(expired|expiring_(11|14|2)|start)$"]}
                     ],
-                    [
+                    [ // old Android
+                        {key: "event.key", values: ["^Templates$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^click_purchasing_btn$"]},
+                        {key: "event.segmentation.label", values: ["^null$"]},
+                    ],
+                    [ // new Android
                         {key: "event.segmentation.category", values: ["^Templates$"]}, // AND
                         {key: "event.segmentation.action", values: ["^click_purchasing_btn$"]},
                         {key: "event.segmentation.label", values: ["^null$"]},
@@ -198,9 +203,9 @@ var countlyConfig = {
                                                                 "^ctxt_presentationmode_tial_start$"]}
                     ],
                     [
-                        {key: "event.segmentation.category", values: ["^Templates$"]}, // AND
-                        {key: "event.segmentation.action", values: ["^click_purchasing_btn$"]},
-                        {key: "event.segmentation.label", values: ["^null$"]},
+                        {key: "event.segmentation.ec", values: ["^Templates$"]}, // AND
+                        {key: "event.segmentation.ea", values: ["^click_purchasing_btn$"]},
+                        {key: "event.segmentation.el", values: ["^null$"]},
                     ],
                 ],
             },
