@@ -617,7 +617,11 @@ function saveEventRawData(base_data, event) {
         }
     }
 
-    var db_collection_name = "events_raw_" + table_suffix;
+    // get current date (UTC), format: YYYYMMDD
+    var today = new Date();
+    var date_suffix = today.toISOString().split('T')[0].replace(/-/g,'');
+  
+    var db_collection_name = "events_raw_" + table_suffix + '_' + date_suffix;  //table name: 'events_raw_<app_id>_<date:YYYYMMDD>'
     base_data._id = new ObjectID();
     var record = base_data;
     record.event = currEvent;
@@ -678,8 +682,10 @@ function filterAndPublishEvent(redis, event_obj) {
                 var find_key = event_obj;
                 // step into the innermost key and get its value, assign the value to find_key
                 key_items.forEach(item => {
-                    if (undefined != find_key[item]) {
+                    if (undefined != find_key[item] && null != find_key[item]) {
                         find_key = find_key[item];
+                    } else {
+                        find_key = "null"; // if the value of the key is 'undefined' or null, set it to string 'null'
                     }
                 });
                 if (null == key_values || key_values.length == 0) {
