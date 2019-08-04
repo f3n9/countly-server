@@ -4,19 +4,16 @@ var nodemailer = require('nodemailer');
 var smtpTransport = require('nodemailer-smtp-transport');
 
 //rename company
-var company = "Company";
-var email = "email@company.com";
+var company = "Yinxiang Analytics Platform";
+var email = "ops+analytics@yinxiang.com";
 
 module.exports = function(mail) {
     //define this if you need to send email from some third party service
     mail.smtpTransport = nodemailer.createTransport(smtpTransport({
-        host: "myhost",
-        secureConnection: true,
-        port: 2525,
-        auth: {
-            user: "username",
-            pass: "password"
-        }
+        host: "smtp",
+        secure: false,
+        ignoreTLS: true,
+        port: 25
     }));
 
     mail.sendMail = function(message, callback) {
