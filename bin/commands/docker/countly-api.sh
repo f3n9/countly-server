@@ -12,4 +12,4 @@ then
 	echo "[api] MongoDB started"
 fi
 
-exec /sbin/setuser countly /usr/bin/nodejs --max-old-space-size=4096 /opt/countly/api/api.js
+exec /sbin/setuser countly /usr/bin/nodejs --max-old-space-size=8192 /opt/countly/api/api.js
