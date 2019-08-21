@@ -2103,10 +2103,19 @@ const validateAppForWriteAPI = (params, done, try_times) => {
                                     //even if paralel request already inserted uid
                                     //this insert will fail
                                     //but we will retry again and fetch new inserted document
-                                    common.db.collection('app_users' + params.app_id).insert({
+                                    common.db.collection('app_users' + params.app_id).update({
                                         _id: params.app_user_id,
                                         uid: uid,
                                         did: params.qstring.device_id
+                                    },
+                                    {
+                                        $set:{
+                                          uid: uid,
+                                          did: params.qstring.device_id
+                                        }
+                                    },
+                                    {
+                                        upsert: true
                                     }, function() {
                                         restartRequest(params, done, try_times);
                                     });
