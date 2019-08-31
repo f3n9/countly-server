@@ -620,7 +620,7 @@ function saveEventRawData(base_data, event) {
     // get current date (UTC), format: YYYYMMDD
     var today = new Date();
     var options = {timeZone: 'Asia/Shanghai', year: 'numeric', month:'2-digit', day: '2-digit'}
-    var date_suffix = today.toLocaleDateString('zh-CN', options).replace(/\//g,'');
+    var date_suffix = today.toLocaleDateString('zh-CN', options).replace(/\//g,'').replace(/-/g,'');
   
     var db_collection_name = "events_raw_" + table_suffix + '_' + date_suffix;  //table name: 'events_raw_<app_id>_<date:YYYYMMDD>'
     base_data._id = new ObjectID();
