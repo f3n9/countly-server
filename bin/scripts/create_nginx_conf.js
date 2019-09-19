@@ -8,7 +8,7 @@ var nginxConfSourcePath = path.join(__dirname, '../config/nginx.server.conf');
 
 var nginxConf = fs.readFileSync(nginxConfSourcePath, { encoding: 'utf8' });
 var apiPath = process.env.COUNTLY_PATH || '';
-var accessLogOutputFile = process.env.COUNTLY_NGINX_ACCESS_LOG || 'off';
+var accessLogOutputFile = process.env.COUNTLY_NGINX_ACCESS_LOG || '';
 
 if (apiPath !== '') {
     if (apiPath.charAt(0) === '/') {
@@ -20,8 +20,8 @@ if (apiPath !== '') {
     nginxConf = nginxConf.replace(searchRegexp, replaceRegexp);
 }
 
-if (accessLogOutputFile !== 'off') {
-    var searchRegexp = /access_log.*$/g;
+if (accessLogOutputFile !== '') {
+    var searchRegexp = /access_log.*/g;
     var replaceRegexp = 'access_log ' + accessLogOutputFile + ';';
     nginxConf = nginxConf.replace(searchRegexp, replaceRegexp);
 }
