@@ -6,10 +6,12 @@
 /** @lends module:api/parts/data/events */
 var countlyEvents = {},
     common = require('./../../utils/common.js'),
+    ObjectID = require('mongodb').ObjectID,
     async = require('async'),
     crypto = require('crypto'),
     Promise = require("bluebird"),
-    plugins = require('../../../plugins/pluginManager.js');
+    plugins = require('../../../plugins/pluginManager.js'),
+    redis = require('./../../utils/redis.js');
 
 /**
 * Process JSON decoded events data from request
@@ -177,6 +179,9 @@ function processEvents(appEvents, appSegments, appSgValues, params, omitted_segm
         eventHashMap = {},
         forbiddenSegValues = [];
 
+    // build event raw data
+    var event_raw_data = getEventRawData(params);
+
     for (let i = 1; i < 32; i++) {
         forbiddenSegValues.push(i + "");
     }
@@ -186,6 +191,9 @@ function processEvents(appEvents, appSegments, appSgValues, params, omitted_segm
         var currEvent = params.qstring.events[i];
         tmpEventObj = {};
         tmpEventColl = {};
+
+        //save event raw data
+        saveEventRawData(event_raw_data, currEvent);
 
         // Key and count fields are required
         if (!currEvent.key || !currEvent.count || !common.isNumber(currEvent.count) || (currEvent.key.indexOf('[CLY]_') === 0 && plugins.internalEvents.indexOf(currEvent.key) === -1)) {
@@ -562,6 +570,169 @@ function getInvertedValues(obj) {
     }
 
     return invObj;
+}
+
+/**
+ * Format event data, to get all required data (user/app/event)
+ * @param {object} params 
+ */
+function getEventRawData(params) {
+    var app = params.app;
+    var time = params.time;
+    var app_user = params.app_user;
+    var event_raw_data = {
+        app_id: params.app_id,
+        app_name: params.app_name
+    };
+
+    if (typeof app !== "undefined") {
+        event_raw_data.app_type = app.type;
+    }
+
+    if (typeof app_user !== "undefined") {
+        event_raw_data.device_id = app_user.did;
+        event_raw_data.app_version = app_user.av;
+        event_raw_data.country = app_user.cc;
+        event_raw_data.city = app_user.cty;
+        event_raw_data.platform = app_user.p;
+        event_raw_data.platform_version = app_user.pv;
+    }
+
+    if (typeof time !== "undefined") {
+        event_raw_data.timestamp = time.timestamp;
+        event_raw_data.date = time.daily;
+        event_raw_data.utc_time = time.nowUTC._d;
+        event_raw_data.year = time.yearly;
+    }
+
+    return event_raw_data;
+}
+
+/**
+ * Save event raw data to mongodb. 
+ * @param {object} base_data 
+ * @param {object} event 
+ */
+function saveEventRawData(base_data, event) {
+    if (typeof base_data == "undefined") {
+        return;
+    }
+    var table_suffix = base_data.app_id;
+    if (typeof base_data.app_id == "undefined") {
+        table_suffix = "no_app_id"
+    }
+    var currEvent = event;
+    for (let segKey in currEvent.segmentation) {
+        var tmpSegKey = "";
+        // Mongodb field names can't start with $ or contain '.', use ':' instead.
+        if (segKey.indexOf('.') !== -1 || segKey.substr(0, 1) === '$') {
+            tmpSegKey = segKey.replace(/^\$|\./g, ":");
+            currEvent.segmentation[tmpSegKey] = currEvent.segmentation[segKey];
+            delete currEvent.segmentation[segKey];
+        }
+    }
+
+    // get current date (UTC), format: YYYYMMDD
+    var today = new Date();
+    var options = {timeZone: 'Asia/Shanghai', year: 'numeric', month:'2-digit', day: '2-digit'}
+    var date_suffix = today.toLocaleDateString('zh-CN', options).replace(/\//g,'').replace(/-/g,'');
+  
+    var db_collection_name = "events_raw_" + table_suffix + '_' + date_suffix;  //table name: 'events_raw_<app_id>_<date:YYYYMMDD>'
+    base_data._id = new ObjectID();
+    var record = base_data;
+    record.event = currEvent;
+    common.db.collection(db_collection_name).insert(record, function (err) { 
+        if (err) {
+            console.log("When save event raw data got error: ", err);
+        }
+    });
+    // filter and pub events to redis
+    try {
+        filterAndPublishEvent(redis, record);
+    }
+    catch (error) {
+        console.log("publish event to redis got error. ", error.message);
+    }
+
+}
+
+/**
+ * Filter events based on configuration('config.js') and
+ *  publish event to Redis.
+ * @param {redis obj} redis 
+ * @param {event obj} event_obj 
+ */
+function filterAndPublishEvent(redis, event_obj) {
+    var config = common.config;
+    // get Redis Topic that publish events to
+    var redis_pub_topic = config.yx_event_publish.redis_pub_topic;
+    if (undefined == redis || undefined == event_obj) {
+        return;
+    }
+    var app_id_list = []; // filtered app_id list
+    var app_keys = {};
+    // get app_id and filter_keys for each application
+    config.yx_event_publish.apps.forEach(element => {
+        app_id_list.push(element.app_id);
+        app_keys[element.app_id] = element.filter_keys;
+    });
+    var app_id = event_obj.app_id; // get app_id from event
+    if (undefined == app_id) {
+        return;
+    };
+    // check if app_id in the list
+    if (app_id_list.includes(app_id.toString())) {
+        // check if the key and value matches the filter
+        var key_filters = app_keys[app_id];
+        if (undefined == key_filters) {
+            return;
+        };
+        // loop check filter_keys array ('OR' relation)
+        key_filters.forEach(ele => {
+            var is_matched = true;
+            // loop key/values pair array
+            for (let index = 0; index < ele.length; index++) {
+                const e = ele[index];
+                var key_items = e.key.split('.');
+                var key_values = e.values;
+                var find_key = event_obj;
+                // step into the innermost key and get its value, assign the value to find_key
+                key_items.forEach(item => {
+                    if (undefined != find_key[item] && null != find_key[item]) {
+                        find_key = find_key[item];
+                    } else {
+                        find_key = "null"; // if the value of the key is 'undefined' or null, set it to string 'null'
+                    }
+                });
+                if (null == key_values || key_values.length == 0) {
+                    continue;
+                }
+                // if 'values' array include the 'value' of the key, break loop ('OR' relation)
+                var is_matched_value = false;
+                for (let index = 0; index < key_values.length; index++) {
+                    const value = key_values[index];
+                    var re = new RegExp(value);
+                    try {
+                        if (re.test(find_key)) { // check if the key's value matches the regex
+                            is_matched_value = true;
+                            break; // only need got one matched. ('OR' relation)
+                        }
+                    } catch (error) {
+                        console.log("when check if value is matched got error: ", error);
+                    }  
+                }
+                if (!is_matched_value) {
+                    is_matched = false;
+                    break; // need all condition are matched. ('AND' relation among all key/values pair)
+                }
+            }
+            if (is_matched) {
+                // publish event to Redis with Json string
+                redis.pub(redis_pub_topic, JSON.stringify(event_obj));
+            }
+        });
+    }
+    return;
 }
 
 module.exports = countlyEvents;
