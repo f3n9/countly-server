@@ -12,4 +12,4 @@ then
 	echo "[dashboard] MongoDB started"
 fi
 
-exec /sbin/setuser countly /usr/bin/nodejs --max-old-space-size=2048 /opt/countly/frontend/express/app.js
+exec /sbin/setuser countly /usr/bin/nodejs --max-old-space-size=${FRONTEND_SPACE_SIZE:-1024} /opt/countly/frontend/express/app.js
