@@ -344,20 +344,20 @@ function processEvents(appEvents, appSegments, appSgValues, params, omitted_segm
                     }
                     eventSegments[collection + "." + zeroId].m = zeroId.split(".")[0];
                     eventSegments[collection + "." + zeroId].s = "no-segment";
-                    common.db.collection(collection).update({'_id': "no-segment_" + zeroId.replace(".", "_")}, {$set: eventSegments[collection + "." + zeroId]}, {'upsert': true}, function() {});
+                    //common.db.collection(collection).update({'_id': "no-segment_" + zeroId.replace(".", "_")}, {$set: eventSegments[collection + "." + zeroId]}, {'upsert': true}, function() {});
                 }
             }
 
             for (let segment in eventCollections[collection]) {
                 let collIdSplits = segment.split("."),
                     collId = segment.replace(/\./g, "_");
-                common.db.collection(collection).update({'_id': collId}, {
+                /* common.db.collection(collection).update({'_id': collId}, {
                     $set: {
                         "m": collIdSplits[1],
                         "s": collIdSplits[0]
                     },
                     "$inc": eventCollections[collection][segment]
-                }, {'upsert': true}, function() {});
+                }, {'upsert': true}, function() {});*/
             }
         }
     }
