@@ -579,7 +579,8 @@ function getEventRawData(params) {
     var app_user = params.app_user;
     var event_raw_data = {
         app_id: params.app_id,
-        app_name: params.app_name
+        app_name: params.app_name,
+        ip_address: params.ip_address
     };
 
     if (typeof app !== "undefined") {
