@@ -1853,6 +1853,11 @@ const processRequestData = (params, app, done) => {
  * @returns {void} void
  */
 const continueProcessingRequestData = (params, done) => {
+    var config = common.config;
+    if (config.yx_app_ids_skipped && config.yx_app_ids_skipped.includes(""+params.app_id)){
+	// skip processing sessions for production apps
+        return done ? done() : false;
+    }
     if (params.qstring.begin_session) {
         countlyApi.data.usage.beginUserSession(params, done);
     }
