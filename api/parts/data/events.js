@@ -20,6 +20,18 @@ var countlyEvents = {},
 **/
 countlyEvents.processEvents = function(params) {
     return new Promise(function(resolve) {
+
+        // build event raw data
+        var event_raw_data = getEventRawData(params);
+        for (let i = 0; i < params.qstring.events.length; i++) {
+            var currEvent = params.qstring.events[i];
+            saveEventRawData(event_raw_data, currEvent);
+        }
+        var config = common.config;
+        if (config.yx_app_ids_skipped && config.yx_app_ids_skipped.includes(""+event_raw_data.app_id)){
+            return;
+        }
+
         var forbiddenSegValues = [];
         for (let i = 1; i < 32; i++) {
             forbiddenSegValues.push(i + "");
@@ -172,7 +184,7 @@ function processEvents(appEvents, appSegments, appSgValues, params, omitted_segm
         forbiddenSegValues = [];
 
     // build event raw data
-    var event_raw_data = getEventRawData(params);
+    // var event_raw_data = getEventRawData(params);
 
     for (let i = 1; i < 32; i++) {
         forbiddenSegValues.push(i + "");
@@ -185,7 +197,7 @@ function processEvents(appEvents, appSegments, appSgValues, params, omitted_segm
         tmpEventColl = {};
 
         //save event raw data
-        saveEventRawData(event_raw_data, currEvent);
+        //saveEventRawData(event_raw_data, currEvent);
 
         // Key and count fields are required
         if (!currEvent.key || !currEvent.count || !common.isNumber(currEvent.count) || (currEvent.key.indexOf('[CLY]_') === 0 && plugins.internalEvents.indexOf(currEvent.key) === -1)) {

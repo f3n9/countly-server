@@ -67,6 +67,19 @@ var countlyConfig = {
 	//mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
 	mongodb: "mongodb://localhost:27017/countly",
     */
+
+    /**
+    * skip further event processing for these apps
+    * only save their raw event data into events_raw collections 
+    */
+    yx_app_ids_skipped: [
+            "5c32fa238e46dd00526ee6c3",
+            "5c33236d4c70d50044982d20",
+            "5c3323ac8e46dd00526ee6c7",
+            "5c2dc53101343000399fad80",
+            "5c932282f8b97a0039cc29ff",
+    ],
+
     /**
      * Redis configuration. 
      * @property {string} host - host of redis, ip or hostname
