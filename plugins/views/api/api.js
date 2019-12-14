@@ -508,7 +508,9 @@ var pluginOb = {},
                                 }
                             }
                         }
-                        return false;
+			// update key so we will later save it into events_raw
+                        currEvent.key = "[CLY]_view_raw";
+                        return true;
                     }
                     return true;
                 });
