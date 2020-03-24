@@ -633,7 +633,10 @@ function saveEventRawData(base_data, event) {
     });
     // filter and pub events to redis
     try {
-        filterAndPublishEvent(redis, record);
+        // paywall filter: publish paywall touched event - pub/sub
+        filterAndPublishEvent(redis, record, common.config.yx_paywall_event_publish); 
+        // yx shitang filter: publish shitang events - queue
+        filterAndPublishEvent(redis, record, common.config.yx_shitang_event_publish); 
     }
     catch (error) {
         console.log("publish event to redis got error. ", error.message);
@@ -646,19 +649,22 @@ function saveEventRawData(base_data, event) {
  *  publish event to Redis.
  * @param {redis obj} redis 
  * @param {event obj} event_obj 
+ * @param {event_publish} obj the config key of event (yx_paywall_event_publish, yx_shitang_event_publish)
  */
-function filterAndPublishEvent(redis, event_obj) {
+function filterAndPublishEvent(redis, event_obj, event_publish) {
     var config = common.config;
-    // get Redis Topic that publish events to
-    var redis_pub_topic = config.yx_event_publish.redis_pub_topic;
+    // get Redis Topic that publish/push events to
+    var redis_key_name = event_publish.redis_key_name;
     if (undefined == redis || undefined == event_obj) {
         return;
     }
     var app_id_list = []; // filtered app_id list
+    var app_platform = {};  // app platform
     var app_keys = {};
     // get app_id and filter_keys for each application
-    config.yx_event_publish.apps.forEach(element => {
+    event_publish.apps.forEach(element => {
         app_id_list.push(element.app_id);
+        app_platform[element.app_id] = element.app_platform;
         app_keys[element.app_id] = element.filter_keys;
     });
     var app_id = event_obj.app_id; // get app_id from event
@@ -712,8 +718,18 @@ function filterAndPublishEvent(redis, event_obj) {
                 }
             }
             if (is_matched) {
-                // publish event to Redis with Json string
-                redis.pub(redis_pub_topic, JSON.stringify(event_obj));
+                var redis_key_type = event_publish.publish_type;
+                if (redis_key_type == "pub-sub") {
+                    // publish event to Redis with Json string
+                    redis.pub(redis_key_name, JSON.stringify(event_obj));
+                }
+                else if (redis_key_type == "list-lpush") {
+                    // update event's platform
+                    var shitang_event = event_obj;
+                    shitang_event.platform = app_platform[app_id];
+                    // lpush data to Redis queue with Json string
+                    redis.lpush(redis_key_name, JSON.stringify(event_obj));
+                }
             }
         });
     }

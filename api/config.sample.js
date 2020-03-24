@@ -97,10 +97,12 @@ var countlyConfig = {
      *  1. If 'apps' is empty(set to []), means filter nothing, no records will be published.
      *  2. if 'filter_keys' is empty (set to []), means publish all events of the 'app_id'
      */
-    yx_event_publish: {
-        redis_pub_topic: "countly-event-pub",
+    yx_paywall_event_publish: {
+        redis_key_name: "countly-event-pub",
+        publish_type: "pub-sub",
         apps: [
             {
+                app_platform: "macOS",
                 app_id: yx_app_id_mapping[env].mac_os, // MacOS 
                 filter_keys: [
                     [ /** event of paywall */
@@ -122,6 +124,7 @@ var countlyConfig = {
                 ],
             },
             {
+                app_platform: "iOS",
                 app_id: yx_app_id_mapping[env].ios, // iOS
                 filter_keys: [
                     [
@@ -143,6 +146,7 @@ var countlyConfig = {
                 ],
             },
             {
+                app_platform: "Android",
                 app_id: yx_app_id_mapping[env].android, // Android
                 filter_keys: [
                     [
@@ -188,6 +192,7 @@ var countlyConfig = {
                 ],
             },
             {
+                app_platform: "Windows",
                 app_id: yx_app_id_mapping[env].windows, // Windows
                 filter_keys: [
                     [
@@ -210,10 +215,73 @@ var countlyConfig = {
                 ],
             },
             /**{
+                app_platform: "Web",
                 app_id: yx_app_id_mapping[env].web, // Web 
                 filter_keys: [
                     [
                         {key: "event.segmentation.eventAction", values: []},
+                    ],
+                ],
+            }, */
+        ],
+    },
+
+    /**
+     * Yinxiang Discovery Service event filter, which will be used to calculate score for notes ranking。
+     * Shitan
+     */
+    yx_shitang_event_publish: {
+        redis_key_name: "countly-shitang-click-event",
+        publish_type: "list-lpush", // use list as a queue to store 'click' event
+        apps: [
+            {
+                app_platform: "iOS",
+                app_id: yx_app_id_mapping[env].ios, // iOS
+                filter_keys: [
+                    [
+                        {key: "event.key", values: ["^discover$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^shitang$"]},
+                        {key: "event.segmentation.label", values: ["^click_note$"]}
+                    ],
+                ],
+            },
+            {
+                app_platform: "Android",
+                app_id: yx_app_id_mapping[env].android, // Android
+                filter_keys: [
+                    [
+                        {key: "event.key", values: ["^discover$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^shitang$"]},
+                        {key: "event.segmentation.label", values: ["^click_note$"]}
+                    ],
+                ],
+            },
+            {
+                app_platform: "Web",
+                app_id: yx_app_id_mapping[env].web, // Web 
+                filter_keys: [
+                    [
+                        {key: "event.key", values: ["^discover$"]}, // AND
+                        {key: "event.segmentation.action", values: ["^shitang$"]},
+                        {key: "event.segmentation.label", values: ["^click_note$"]}
+                    ],
+                ],
+            },
+            /*{
+                app_platform: "macOS",
+                app_id: yx_app_id_mapping[env].mac_os, // MacOS 
+                filter_keys: [
+                    [ // event of paywall 
+                        {key: "", values: [""]}, // AND
+                    ], // OR
+                ],
+            },
+            {
+                app_platform: "Windows",
+                app_id: yx_app_id_mapping[env].windows, // Windows
+                filter_keys: [
+                    [
+                        {key: "", values: [""]}, // AND
                     ],
                 ],
             }, */

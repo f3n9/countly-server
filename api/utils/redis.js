@@ -68,4 +68,18 @@ redis.sub = function(topic, cb) {
     });
 };
 
+redis.lpush = function(list_name, msg) {
+    if (undefined == list_name || '' == list_name) {
+        return;
+    }
+    if (undefined == msg || '' == msg) {
+        return;
+    }
+    redisClient.lpush(list_name, msg, function(err, number) {
+        if (err) {
+            common.log("LPush message to list '" + list_name + "' failed. err: " + err + ", msg: " + msg);
+        }
+    });
+};
+
 module.exports = redis;
